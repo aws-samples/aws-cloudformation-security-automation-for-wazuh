@@ -1,0 +1,581 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      HVM64: ami-0ff8a91507f77f867
+    us-east-2:
+      HVM64: ami-0b59bfac6be064b78
+    us-west-1:
+      HVM64: ami-0019ef04ac50be30f
+    us-west-2:
+      HVM64: ami-a0cfeed8
+    ca-central-1:
+      HVM64: ami-0b18956f
+    eu-central-1:
+      HVM64: ami-0233214e13e500f77
+    eu-west-1:
+      HVM64: ami-047bb4163c506cd98
+    eu-west-2:
+      HVM64: ami-f976839e
+    eu-west-3:
+      HVM64: ami-0ebc281c20e89ba4b
+    ap-northeast-1:
+      HVM64: ami-06cd52961ce9f0d85
+    ap-northeast-2:
+      HVM64: ami-0a10b2721688ce9d2
+    ap-southeast-1:
+      HVM64: ami-08569b978cc4dfa10
+    ap-southeast-2:
+      HVM64: ami-09b42976632b27e9b
+    ap-south-1:
+      HVM64: ami-0912f71e06545ad88
+    sa-east-1:
+      HVM64: ami-07b14488da8ea02a0
+  SubnetConfig:
+    WazuhVpc:
+      CIDR: 10.0.0.0/16
+    SubnetWazuh:
+      CIDR: 10.0.2.0/24
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Environment type"
+        Parameters:
+          - EnvironmentType
+      -
+        Label:
+          default: "AWS environment"
+        Parameters:
+          - WazuhVpc
+          - AvailabilityZone
+          - KeyPairName
+          - pSubnetWazuh
+      - 
+        Label:
+          default: "Version and instance types"
+        Parameters:
+          - ElasticWazuhVersion
+          - WazuhInstanceType
+          - ElasticInstanceType
+          - KibanaInstanceType
+          - SshUsername
+          - SshPassword
+      - 
+        Label:
+          default: "Wazuh configuration"
+        Parameters:
+          - WazuhServerPort
+          - WazuhRegistrationPort
+          - WazuhApiPort
+          - WazuhApiAdminUsername
+          - WazuhApiAdminPassword
+          - WazuhClusterKey
+      -
+        Label:
+          default: "Kibana configuration"
+        Parameters:
+          - KibanaPort
+          - KibanaUsername
+          - KibanaPassword
+      -
+        Label:
+          default: "Integration keys"
+        Parameters:
+          - AwsSecretKey
+          - AwsAccessKey
+      -
+        Label:
+          default: "SSL Certificate"
+        Parameters:
+          - SSLCertificateARN
+
+Parameters:
+
+  WazuhVpc:
+    Description: The VPC where the infrastructure will be isolated.
+    Type: AWS::EC2::VPC::Id
+  pSubnetWazuh:
+    Description: The Subnet where resources will be located
+    Type: AWS::EC2::Subnet::Id 
+  # AWS environment 
+  AvailabilityZone:
+    Description: Select an availability zone for the VPC
+    Type: 'List<AWS::EC2::AvailabilityZone::Name>'
+  KeyPairName:
+    Description: Existing EC2 key pair for SSH access
+    Type: 'AWS::EC2::KeyPair::KeyName'
+  SshUsername:
+    Default: wazuh
+    Description: SSH username
+    Type: String
+    MinLength: '5'
+    MaxLength: '32'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Only alphanumeric characters. Minimum length 5. Maximum length 32.
+  SshPassword:
+    Description: SSH Password
+    NoEcho: 'True'
+    Type: String
+    MinLength: '8'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Only alphanumeric characters. Minimum length 8. Maximum length 64.
+
+  # Version and instance types
+  ElasticWazuhVersion:
+    AllowedValues:
+      - 6.5.0_3.7.0
+      - 6.5.1_3.7.1
+      - 6.5.2_3.7.1
+      - 6.5.3_3.7.2
+      - 6.5.4_3.7.2
+      - 6.6.2_3.9.0
+      - 6.7.0_3.9.0
+      - 6.7.1_3.9.0
+      - 6.8.0_3.9.2
+    ConstraintDescription: Format is ElasticVersion_WazuhVersion
+    Default: 6.8.0_3.9.2
+    Description: Elastic and Wazuh versions to be installed
+    Type: String
+  WazuhInstanceType:
+    AllowedValues:
+      - t2.micro
+      - t2.medium
+      - t2.large
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+
+    ConstraintDescription: Must contain valid instance type
+    Default: t2.medium
+    Description: Type of EC2 instance for Wazuh instance
+    Type: String
+  EnvironmentType:
+    AllowedValues:
+      - production
+      - staging
+      - devel    
+    ConstraintDescription: Must contain valid instance type
+    Default: production
+    Description: Select a stage
+    Type: String
+
+  ElasticInstanceType:
+    AllowedValues:
+      - t2.medium
+      - t2.large
+      - i3.large
+      - i3.xlarge
+      - i3.2xlarge
+
+    ConstraintDescription: Must contain valid instance type
+    Default: t2.medium
+    Description: Type of EC2 instance for Elastic instance
+    Type: String
+  KibanaInstanceType:
+    AllowedValues:
+      - t2.medium
+      - t2.large
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - r5.large
+
+    ConstraintDescription: Must contain valid instance type
+    Default: t2.medium
+    Description: Type of EC2 instance for Kibana instance
+    Type: String
+  # Wazuh configuration
+  WazuhServerPort:
+    Default: '1514'
+    Description: Port for agents connection with Wazuh server
+    Type: String
+  WazuhRegistrationPort:
+    Default: '1515'
+    Description: Port for agents registration with Wazuh server
+    Type: String
+  WazuhApiPort:
+    Default: '55000'
+    Description: Port for Wazuh server API
+    Type: String
+  WazuhApiAdminUsername:
+    Default: admin
+    Description: Admin username for Wazuh API
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Only alphanumeric characters
+  WazuhApiAdminPassword:
+    Description: Admin password for Wazuh API
+    NoEcho: 'True'
+    Type: String
+    MinLength: '1'
+    MaxLength: '48'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Only alphanumeric characters
+  WazuhClusterKey:
+    Description: Key used for Wazuh servers cluster
+    Default: 'abcdefghijklmnopqrstuvwxyz012345'
+    Type: String
+    MinLength: '32'
+    MaxLength: '32'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Any alphanumeric string of 32 characters
+  # Kibana configuration
+  KibanaPort:
+    Default: '443'
+    Description: Port for Kibana WUI
+    Type: String
+  KibanaUsername:
+    Default: wazuh
+    Description: Username for Kibana access
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Only alphanumeric characters
+  KibanaPassword:
+    Description: Password for Kibana access
+    NoEcho: 'True'
+    Type: String
+    MinLength: '1'
+    MaxLength: '48'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Only alphanumeric characters
+  AwsSecretKey:
+    Description: (Optional) Secret key for AWS integration
+    Type: String
+
+  AwsAccessKey:
+    Description: (Optional) Access key for AWS integration
+    Type: String
+
+  SSLCertificateARN:
+    Description: 'Used for HTTPS access to WUI. Existent certificate, identified by its Amazon Resource Name (ARN).'
+    Type: String
+
+Resources:
+
+  # Instance security groups
+  ElasticSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Elasticsearch security group
+      VpcId: !Ref WazuhVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+          CidrIp: !FindInMap
+            - SubnetConfig
+            - WazuhVpc
+            - CIDR
+        - IpProtocol: tcp
+          FromPort: 9200
+          ToPort: 9400
+          CidrIp: !FindInMap
+            - SubnetConfig
+            - WazuhVpc
+            - CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-ElasticSecurityGroup'
+  KibanaSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Kibana security group
+      VpcId: !Ref WazuhVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: !Ref KibanaPort
+          ToPort: !Ref KibanaPort
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9200
+          ToPort: 9400
+          CidrIp: !FindInMap
+            - SubnetConfig
+            - WazuhVpc
+            - CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-KibanaSecurityGroup'
+  WazuhSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Wazuh security group
+      VpcId: !Ref WazuhVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: !Ref WazuhServerPort
+          ToPort: !Ref WazuhServerPort
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: !Ref WazuhRegistrationPort
+          ToPort: !Ref WazuhRegistrationPort
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 1516
+          ToPort: 1516
+          CidrIp: !FindInMap
+            - SubnetConfig
+            - WazuhVpc
+            - CIDR
+        - IpProtocol: tcp
+          FromPort: !Ref WazuhApiPort
+          ToPort: !Ref WazuhApiPort
+          CidrIp: !FindInMap
+            - SubnetConfig
+            - WazuhVpc
+            - CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-WazuhSecurityGroup'
+  
+  # Elasticsearch load balancer
+  ElbElasticSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: ELB Elasticsearch security group
+      VpcId: !Ref WazuhVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 9200
+          ToPort: 9200
+          CidrIp: !FindInMap
+            - SubnetConfig
+            - WazuhVpc
+            - CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-ElbElasticSecurityGroup'
+  # Logstash load balancer
+  ElbLogstashSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: ELB Logstash security group
+      VpcId: !Ref WazuhVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+          CidrIp: !FindInMap
+            - SubnetConfig
+            - WazuhVpc
+            - CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-ElbLogstashSecurityGroup'
+  
+  # IAM role and profile
+  InstanceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - cloudformation.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-GetCloudformation'
+          PolicyDocument:
+            Statement:
+              - Action:
+                  - 'cloudformation:DescribeStack*'
+                  - 'cloudformation:DescribeStackResource*'
+                  - 'cloudformation:List*'
+                Resource: '*'
+                Effect: Allow
+        - PolicyName: !Sub '${AWS::StackName}-DescribeInstances'
+          PolicyDocument:
+            Statement:
+              - Action:
+                  - 'ec2:DescribeInstances'
+                Resource: '*'
+                Effect: Allow
+  InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  # Wazuh master instance
+  WazuhMasterInstance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      'AWS::CloudFormation::Init':
+        configSets:
+          WazuhInstallationSet:
+            - WazuhFiles
+            - WazuhInstall
+        WazuhFiles:
+          files:
+            /tmp/wazuh_cf_settings:
+              content: !Sub |
+                SshUsername: ${SshUsername}
+                SshPassword: ${SshPassword}
+              mode: '000600'
+              owner: root
+              group: root
+            /tmp/wazuh_cf_master.sh:
+              source: !Sub >-
+                https://raw.githubusercontent.com/wazuh/wazuh-cloudformation/aws-nist/wazuh/cluster/wazuh_cf_master.sh
+              mode: '000700'
+              owner: root
+              group: root
+        WazuhInstall:
+          commands:
+            01_RunInstallationScript:
+              command: /tmp/wazuh_cf_master.sh
+    Properties:
+      ImageId: !FindInMap
+        - "RegionMap"
+        - Ref: "AWS::Region"
+        - HVM64
+      InstanceType: !Ref WazuhInstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      KeyName: !Ref KeyPairName
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 200
+            VolumeType: gp2
+
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet: 
+            - Ref: "WazuhSecurityGroup"
+          SubnetId: 
+            Ref: "pSubnetWazuh"
+      Tags:
+        - Key: Name
+          Value: WazuhMaster
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          /opt/aws/bin/cfn-init --stack ${AWS::StackName} --resource WazuhMasterInstance --configsets WazuhInstallationSet --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource WazuhMasterInstance --region ${AWS::Region}
+  WazuhMasterEth0: 
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId: !Ref pSubnetWazuh
+      GroupSet: [!Ref 'WazuhSecurityGroup']
+  WazuhMasterEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  WazuhMasterEIPAssociation:
+    Type: 'AWS::EC2::EIPAssociation'
+    Properties:
+      NetworkInterfaceId: !Ref WazuhMasterEth0
+      AllocationId: !GetAtt
+        - WazuhMasterEIP
+        - AllocationId
+
+  # Wazuh worker instance
+  WazuhWorkerInstance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      'AWS::CloudFormation::Init':
+        configSets:
+          WazuhInstallationSet:
+            - WazuhFiles
+            - WazuhInstall
+        WazuhFiles:
+          files:
+            /tmp/wazuh_cf_settings:
+              content: !Sub |
+                SshUsername: ${SshUsername}
+                SshPassword: ${SshPassword}
+              mode: '000600'
+              owner: root
+              group: root
+            /tmp/wazuh_cf_worker.sh:
+              source: !Sub >-
+                https://raw.githubusercontent.com/wazuh/wazuh-cloudformation/aws-nist/wazuh/cluster/wazuh_cf_worker.sh
+              mode: '000700'
+              owner: root
+              group: root
+        WazuhInstall:
+          commands:
+            01_RunInstallationScript:
+              command: /tmp/wazuh_cf_worker.sh
+    Properties:
+      ImageId: !FindInMap
+        - "RegionMap"
+        - Ref: "AWS::Region"
+        - HVM64
+      InstanceType: !Ref WazuhInstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      KeyName: !Ref KeyPairName
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 200
+            VolumeType: gp2
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref WazuhWorkerEth0
+          DeviceIndex: 0
+      Tags:
+        - Key: Name
+          Value: WazuhWorker
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          /opt/aws/bin/cfn-init --stack ${AWS::StackName} --resource WazuhWorkerInstance --configsets WazuhInstallationSet --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource WazuhWorkerInstance --region ${AWS::Region}
+  WazuhWorkerEth0: 
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId: !Ref pSubnetWazuh
+      GroupSet: [!Ref 'WazuhSecurityGroup']
+  WazuhWorkerEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  WazuhWorkerEIPAssociation:
+    Type: 'AWS::EC2::EIPAssociation'
+    Properties:
+      NetworkInterfaceId: !Ref WazuhWorkerEth0
+      AllocationId: !GetAtt
+        - WazuhWorkerEIP
+        - AllocationId
+
+Outputs:
+  WazuhMasterIp:
+    Description: Wazuh Master instance IP
+    Value: ${WazuhMasterInstance.PrivateIp}
