@@ -20,12 +20,19 @@ We are leveraging cloudformation to deploy a nested stack. https://docs.aws.amaz
 The nested stacks allow us to configure and independantly modify resources within the stacks.  This type of automation allows us to replace, extend, or maintain stacks independently.
 
 Main Template -Coordinates the other templates
+
 IAM Template -Give us roles and permissions
+
 Config-Rules Template -Can be extended to include rules important to your business
+
 Logging Template -Sets the logging parameters and the necessary storage locations
+
 VPC-Management -Creates the bastion host and network used to access the environment
+
 VPC-Production -Creates the required VPC, gateways, and networking components for the environment
+
 Application -Deploys a sample application leveraging Linux and Amazon RDS.
+
 Wazuh -Configures the security tools and Wazuh managers.
 
 Acknowledgements:
