@@ -15,9 +15,12 @@ Why leverage the AWS NIST High Impact template? https://aws.amazon.com/quickstar
 The AWS NIST High Impact components provide security-focused architectural elements for cloud provisioning teams, developers, integrators, and information security teams who need to leverage strict security, compliance, and risk management controls. NIST SP 800-53 (Rev. 4) high-impact security controls baseline
 
 What are we deploying?
+![](nist-high-on-aws-architecture.png)
 Pre-requisites: You will need the ability to deploy up to 7 EIP's. (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html#eip-basics)  This may require an account increase. https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html
 We are leveraging cloudformation to deploy a nested stack. https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html
 The nested stacks allow us to configure and independantly modify resources within the stacks.  This type of automation allows us to replace, extend, or maintain stacks independently.
+
+![](nestedstack.png)
 
 Main Template -Coordinates the other templates
 
