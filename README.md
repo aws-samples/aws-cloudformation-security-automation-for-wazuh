@@ -16,7 +16,7 @@ The AWS NIST High Impact components provide security-focused architectural eleme
 
 What are we deploying?
 ![](nist-high-on-aws-architecture.png)
-Pre-requisites: You will need the ability to deploy up to 7 EIP's. (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html#eip-basics)  This may require an account increase. https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html
+## Pre-requisites: You will need the ability to deploy up to 7 EIP's. (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html#eip-basics)  This may require an account increase. https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html
 We are leveraging cloudformation to deploy a nested stack. https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html
 The nested stacks allow us to configure and independantly modify resources within the stacks.  This type of automation allows us to replace, extend, or maintain stacks independently.
 
@@ -38,7 +38,7 @@ Application -Deploys a sample application leveraging Linux and Amazon RDS.
 
 Wazuh -Configures the security tools and Wazuh managers.
 
-Acknowledgements:
+## Acknowledgements:
 This project is based on work from two other projects.  The Wazuh project (https://github.com/wazuh) and the AWS NIST High Quickstart (https://aws.amazon.com/quickstart/architecture/compliance-nist-high-impact/).  I would like to thank those who have contributed to those projects and encourage you to review them as well.
 
 ## License
