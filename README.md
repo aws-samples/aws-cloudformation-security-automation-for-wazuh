@@ -4,7 +4,7 @@ NIST based Open Source security automation delivered as AWS Cloudformation
 
 This project is based upon the open source security project Wazuh (which itself is a fork of OSSEC) https://github.com/wazuh and a modified version of the AWS NIST High Quickstart https://aws.amazon.com/quickstart/architecture/compliance-nist-high-impact/.
 
-This implementation is intended to show a reference architecture using cloudformation to instantiate and Elastic Stack, Kibana, the Wazuh Manager, and a sample multi-tier application.  This set of templates will take up to 30 minutes to deploy.
+This implementation is intended to show a reference architecture using cloudformation to instantiate an Elastic Stack, Kibana, the Wazuh Manager, and a sample multi-tier application.  This set of templates will take up to 30 minutes to deploy.
 
 What is Wazuh?  https://documentation.wazuh.com/current/installation-guide/index.html
 
